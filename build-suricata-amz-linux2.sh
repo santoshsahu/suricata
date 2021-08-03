@@ -131,11 +131,3 @@ then
   echo "Failed to create /usr/local/var/log/suricata."
   exit 1
 fi
-echo "Removing vxlanagent directory."
-rm -Rf /home/ec2-user/vxlanagent
-rc=$?
-if [ $rc -ne 0 ];
-then
-  echo "Failed to remove vxlanagent directory."
-  exit 1
-fi
