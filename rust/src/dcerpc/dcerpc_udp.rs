@@ -15,6 +15,8 @@
  * 02110-1301, USA.
  */
 
+use std::mem::transmute;
+
 use crate::applayer::*;
 use crate::core;
 use crate::dcerpc::dcerpc::{
@@ -145,7 +147,7 @@ impl DCERPCUDPState {
 
             match hdr.pkt_type {
                 DCERPC_TYPE_REQUEST => {
-                    tx.stub_data_buffer_ts.extend_from_slice(input);
+                    tx.stub_data_buffer_ts.extend_from_slice(&input);
                     tx.frag_cnt_ts += 1;
                     if done {
                         tx.req_done = true;
@@ -153,7 +155,7 @@ impl DCERPCUDPState {
                     return true;
                 }
                 DCERPC_TYPE_RESPONSE => {
-                    tx.stub_data_buffer_tc.extend_from_slice(input);
+                    tx.stub_data_buffer_tc.extend_from_slice(&input);
                     tx.frag_cnt_tc += 1;
                     if done {
                         tx.resp_done = true;
@@ -205,7 +207,7 @@ impl DCERPCUDPState {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dcerpc_udp_parse(
+pub extern "C" fn rs_dcerpc_udp_parse(
     _flow: *const core::Flow, state: *mut std::os::raw::c_void, _pstate: *mut std::os::raw::c_void,
     input: *const u8, input_len: u32, _data: *const std::os::raw::c_void, _flags: u8,
 ) -> AppLayerResult {
@@ -219,18 +221,18 @@ pub unsafe extern "C" fn rs_dcerpc_udp_parse(
 
 #[no_mangle]
 pub extern "C" fn rs_dcerpc_udp_state_free(state: *mut std::os::raw::c_void) {
-    std::mem::drop(unsafe { Box::from_raw(state as *mut DCERPCUDPState) });
+    let _drop: Box<DCERPCUDPState> = unsafe { transmute(state) };
 }
 
 #[no_mangle]
 pub extern "C" fn rs_dcerpc_udp_state_new(_orig_state: *mut std::os::raw::c_void, _orig_proto: core::AppProto) -> *mut std::os::raw::c_void {
     let state = DCERPCUDPState::new();
     let boxed = Box::new(state);
-    return Box::into_raw(boxed) as *mut _;
+    return unsafe { transmute(boxed) };
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dcerpc_udp_state_transaction_free(
+pub extern "C" fn rs_dcerpc_udp_state_transaction_free(
     state: *mut std::os::raw::c_void, tx_id: u64,
 ) {
     let dce_state = cast_pointer!(state, DCERPCUDPState);
@@ -239,7 +241,7 @@ pub unsafe extern "C" fn rs_dcerpc_udp_state_transaction_free(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dcerpc_udp_get_tx_detect_state(
+pub extern "C" fn rs_dcerpc_udp_get_tx_detect_state(
     vtx: *mut std::os::raw::c_void,
 ) -> *mut core::DetectEngineState {
     let dce_state = cast_pointer!(vtx, DCERPCTransaction);
@@ -250,7 +252,7 @@ pub unsafe extern "C" fn rs_dcerpc_udp_get_tx_detect_state(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dcerpc_udp_set_tx_detect_state(
+pub extern "C" fn rs_dcerpc_udp_set_tx_detect_state(
     vtx: *mut std::os::raw::c_void, de_state: &mut core::DetectEngineState,
 ) -> std::os::raw::c_int {
     let dce_state = cast_pointer!(vtx, DCERPCTransaction);
@@ -259,7 +261,7 @@ pub unsafe extern "C" fn rs_dcerpc_udp_set_tx_detect_state(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dcerpc_udp_get_tx_data(
+pub extern "C" fn rs_dcerpc_udp_get_tx_data(
     tx: *mut std::os::raw::c_void)
     -> *mut AppLayerTxData
 {
@@ -268,13 +270,13 @@ pub unsafe extern "C" fn rs_dcerpc_udp_get_tx_data(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dcerpc_udp_get_tx(
+pub extern "C" fn rs_dcerpc_udp_get_tx(
     state: *mut std::os::raw::c_void, tx_id: u64,
 ) -> *mut std::os::raw::c_void {
     let dce_state = cast_pointer!(state, DCERPCUDPState);
     match dce_state.get_tx(tx_id) {
         Some(tx) => {
-            return tx as *const _ as *mut _;
+            return unsafe{ transmute(tx) };
         },
         None => {
             return std::ptr::null_mut();
@@ -283,7 +285,7 @@ pub unsafe extern "C" fn rs_dcerpc_udp_get_tx(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dcerpc_udp_get_tx_cnt(vtx: *mut std::os::raw::c_void) -> u64 {
+pub extern "C" fn rs_dcerpc_udp_get_tx_cnt(vtx: *mut std::os::raw::c_void) -> u64 {
     let dce_state = cast_pointer!(vtx, DCERPCUDPState);
     dce_state.tx_id
 }
@@ -303,14 +305,16 @@ fn probe(input: &[u8]) -> (bool, bool) {
     }
 }
 
-pub unsafe extern "C" fn rs_dcerpc_probe_udp(_f: *const core::Flow, direction: u8, input: *const u8,
+pub extern "C" fn rs_dcerpc_probe_udp(_f: *const core::Flow, direction: u8, input: *const u8,
                                       len: u32, rdir: *mut u8) -> core::AppProto
 {
     SCLogDebug!("Probing the packet for DCERPC/UDP");
     if len == 0 {
         return core::ALPROTO_UNKNOWN;
     }
-    let slice: &[u8] = std::slice::from_raw_parts(input as *mut u8, len as usize);
+    let slice: &[u8] = unsafe {
+        std::slice::from_raw_parts(input as *mut u8, len as usize)
+    };
     //is_incomplete is checked by caller
     let (is_dcerpc, is_request) = probe(slice);
     if is_dcerpc {
@@ -320,11 +324,11 @@ pub unsafe extern "C" fn rs_dcerpc_probe_udp(_f: *const core::Flow, direction: u
             core::STREAM_TOCLIENT
         };
         if direction & (core::STREAM_TOSERVER|core::STREAM_TOCLIENT) != dir {
-            *rdir = dir;
+            unsafe { *rdir = dir };
         }
-        return ALPROTO_DCERPC;
+        return unsafe {ALPROTO_DCERPC};
     }
-    return core::ALPROTO_FAILED;
+    return unsafe { core::ALPROTO_FAILED };
 }
 
 fn register_pattern_probe() -> i8 {

@@ -22,6 +22,7 @@ use crate::core::{sc_detect_engine_state_free, sc_app_layer_decoder_events_free_
 use crate::dhcp::parser::*;
 use std;
 use std::ffi::{CStr,CString};
+use std::mem::transmute;
 
 static mut ALPROTO_DHCP: AppProto = ALPROTO_UNKNOWN;
 
@@ -221,7 +222,7 @@ impl DHCPState {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_probing_parser(_flow: *const Flow,
+pub extern "C" fn rs_dhcp_probing_parser(_flow: *const Flow,
                                          _direction: u8,
                                          input: *const u8,
                                          input_len: u32,
@@ -234,7 +235,7 @@ pub unsafe extern "C" fn rs_dhcp_probing_parser(_flow: *const Flow,
     let slice = build_slice!(input, input_len as usize);
     match parse_header(slice) {
         Ok((_, _)) => {
-            return ALPROTO_DHCP;
+            return unsafe { ALPROTO_DHCP };
         }
         _ => {
             return ALPROTO_UNKNOWN;
@@ -250,12 +251,12 @@ pub extern "C" fn rs_dhcp_tx_get_alstate_progress(_tx: *mut std::os::raw::c_void
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_state_get_tx(state: *mut std::os::raw::c_void,
+pub extern "C" fn rs_dhcp_state_get_tx(state: *mut std::os::raw::c_void,
                                        tx_id: u64) -> *mut std::os::raw::c_void {
     let state = cast_pointer!(state, DHCPState);
     match state.get_tx(tx_id) {
         Some(tx) => {
-            return tx as *const _ as *mut _;
+            return unsafe { transmute(tx) };
         }
         None => {
             return std::ptr::null_mut();
@@ -264,13 +265,13 @@ pub unsafe extern "C" fn rs_dhcp_state_get_tx(state: *mut std::os::raw::c_void,
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_state_get_tx_count(state: *mut std::os::raw::c_void) -> u64 {
+pub extern "C" fn rs_dhcp_state_get_tx_count(state: *mut std::os::raw::c_void) -> u64 {
     let state = cast_pointer!(state, DHCPState);
     return state.tx_id;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_parse(_flow: *const core::Flow,
+pub extern "C" fn rs_dhcp_parse(_flow: *const core::Flow,
                                 state: *mut std::os::raw::c_void,
                                 _pstate: *mut std::os::raw::c_void,
                                 input: *const u8,
@@ -286,7 +287,7 @@ pub unsafe extern "C" fn rs_dhcp_parse(_flow: *const core::Flow,
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_state_tx_free(
+pub extern "C" fn rs_dhcp_state_tx_free(
     state: *mut std::os::raw::c_void,
     tx_id: u64)
 {
@@ -298,16 +299,19 @@ pub unsafe extern "C" fn rs_dhcp_state_tx_free(
 pub extern "C" fn rs_dhcp_state_new(_orig_state: *mut std::os::raw::c_void, _orig_proto: AppProto) -> *mut std::os::raw::c_void {
     let state = DHCPState::new();
     let boxed = Box::new(state);
-    return Box::into_raw(boxed) as *mut _;
+    return unsafe {
+        transmute(boxed)
+    };
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_state_free(state: *mut std::os::raw::c_void) {
-    std::mem::drop(Box::from_raw(state as *mut DHCPState));
+pub extern "C" fn rs_dhcp_state_free(state: *mut std::os::raw::c_void) {
+    // Just unbox...
+    let _drop: Box<DHCPState> = unsafe { transmute(state) };
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_state_get_event_info_by_id(event_id: std::os::raw::c_int,
+pub extern "C" fn rs_dhcp_state_get_event_info_by_id(event_id: std::os::raw::c_int,
                                                      event_name: *mut *const std::os::raw::c_char,
                                                      event_type: *mut core::AppLayerEventType)
                                                      -> i8
@@ -317,15 +321,17 @@ pub unsafe extern "C" fn rs_dhcp_state_get_event_info_by_id(event_id: std::os::r
             DHCPEvent::TruncatedOptions => { "truncated_options\0" },
             DHCPEvent::MalformedOptions => { "malformed_options\0" },
         };
-        *event_name = estr.as_ptr() as *const std::os::raw::c_char;
-        *event_type = core::APP_LAYER_EVENT_TYPE_TRANSACTION;
+        unsafe{
+            *event_name = estr.as_ptr() as *const std::os::raw::c_char;
+            *event_type = core::APP_LAYER_EVENT_TYPE_TRANSACTION;
+        };
         0
     } else {
         -1
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_state_get_events(tx: *mut std::os::raw::c_void)
+pub extern "C" fn rs_dhcp_state_get_events(tx: *mut std::os::raw::c_void)
                                            -> *mut core::AppLayerDecoderEvents
 {
     let tx = cast_pointer!(tx, DHCPTransaction);
@@ -333,7 +339,7 @@ pub unsafe extern "C" fn rs_dhcp_state_get_events(tx: *mut std::os::raw::c_void)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_state_get_event_info(
+pub extern "C" fn rs_dhcp_state_get_event_info(
     event_name: *const std::os::raw::c_char,
     event_id: *mut std::os::raw::c_int,
     event_type: *mut core::AppLayerEventType)
@@ -342,7 +348,7 @@ pub unsafe extern "C" fn rs_dhcp_state_get_event_info(
     if event_name == std::ptr::null() {
         return -1;
     }
-    let c_event_name: &CStr = CStr::from_ptr(event_name);
+    let c_event_name: &CStr = unsafe { CStr::from_ptr(event_name) };
     let event = match c_event_name.to_str() {
         Ok(s) => {
             match s {
@@ -353,13 +359,15 @@ pub unsafe extern "C" fn rs_dhcp_state_get_event_info(
         },
         Err(_) => -1, // UTF-8 conversion failed
     };
-    *event_type = core::APP_LAYER_EVENT_TYPE_TRANSACTION;
-    *event_id = event as std::os::raw::c_int;
+    unsafe{
+        *event_type = core::APP_LAYER_EVENT_TYPE_TRANSACTION;
+        *event_id = event as std::os::raw::c_int;
+    };
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_dhcp_state_get_tx_iterator(
+pub extern "C" fn rs_dhcp_state_get_tx_iterator(
     _ipproto: u8,
     _alproto: AppProto,
     state: *mut std::os::raw::c_void,
@@ -371,7 +379,7 @@ pub unsafe extern "C" fn rs_dhcp_state_get_tx_iterator(
     let state = cast_pointer!(state, DHCPState);
     match state.get_tx_iterator(min_tx_id, istate) {
         Some((tx, out_tx_id, has_next)) => {
-            let c_tx = tx as *const _ as *mut _;
+            let c_tx = unsafe { transmute(tx) };
             let ires = applayer::AppLayerGetTxIterTuple::with_values(
                 c_tx, out_tx_id, has_next);
             return ires;

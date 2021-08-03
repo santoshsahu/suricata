@@ -35,7 +35,7 @@ fn krb5_log_response(jsb: &mut JsonBuilder, tx: &mut KRB5Transaction) -> Result<
         None        => "<empty>".to_owned(),
     };
     let realm = match tx.realm {
-        Some(ref x) => x.0.to_string(),
+        Some(ref x) => format!("{}", x.0),
         None        => "<empty>".to_owned(),
     };
     let sname = match tx.sname {

@@ -210,7 +210,6 @@ static int SCConfLogReopenAsyncRedis(LogFileCtx *log_ctx)
 
     if (ctx->ev_base != NULL) {
         event_base_free(ctx->ev_base);
-        ctx->ev_base = NULL;
     }
 
     if (ctx->async == NULL) {

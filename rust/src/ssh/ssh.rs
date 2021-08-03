@@ -20,6 +20,7 @@ use crate::applayer::*;
 use crate::core::STREAM_TOSERVER;
 use crate::core::{self, AppProto, Flow, ALPROTO_UNKNOWN, IPPROTO_TCP};
 use std::ffi::{CStr, CString};
+use std::mem::transmute;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 static mut ALPROTO_SSH: AppProto = ALPROTO_UNKNOWN;
@@ -369,7 +370,7 @@ export_tx_set_detect_state!(rs_ssh_tx_set_detect_state, SSHTransaction);
 export_tx_data_get!(rs_ssh_get_tx_data, SSHTransaction);
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_state_get_events(
+pub extern "C" fn rs_ssh_state_get_events(
     tx: *mut std::os::raw::c_void,
 ) -> *mut core::AppLayerDecoderEvents {
     let tx = cast_pointer!(tx, SSHTransaction);
@@ -377,14 +378,14 @@ pub unsafe extern "C" fn rs_ssh_state_get_events(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_state_get_event_info(
+pub extern "C" fn rs_ssh_state_get_event_info(
     event_name: *const std::os::raw::c_char, event_id: *mut std::os::raw::c_int,
     event_type: *mut core::AppLayerEventType,
 ) -> std::os::raw::c_int {
     if event_name == std::ptr::null() {
         return -1;
     }
-    let c_event_name: &CStr = CStr::from_ptr(event_name);
+    let c_event_name: &CStr = unsafe { CStr::from_ptr(event_name) };
     let event = match c_event_name.to_str() {
         Ok(s) => {
             match s {
@@ -397,13 +398,15 @@ pub unsafe extern "C" fn rs_ssh_state_get_event_info(
         }
         Err(_) => -1, // UTF-8 conversion failed
     };
-    *event_type = core::APP_LAYER_EVENT_TYPE_TRANSACTION;
-    *event_id = event as std::os::raw::c_int;
+    unsafe {
+        *event_type = core::APP_LAYER_EVENT_TYPE_TRANSACTION;
+        *event_id = event as std::os::raw::c_int;
+    };
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_state_get_event_info_by_id(
+pub extern "C" fn rs_ssh_state_get_event_info_by_id(
     event_id: std::os::raw::c_int, event_name: *mut *const std::os::raw::c_char,
     event_type: *mut core::AppLayerEventType,
 ) -> i8 {
@@ -414,8 +417,10 @@ pub unsafe extern "C" fn rs_ssh_state_get_event_info_by_id(
             SSHEvent::InvalidRecord => "invalid_record\0",
             SSHEvent::LongKexRecord => "long_kex_record\0",
         };
-        *event_name = estr.as_ptr() as *const std::os::raw::c_char;
-        *event_type = core::APP_LAYER_EVENT_TYPE_TRANSACTION;
+        unsafe {
+            *event_name = estr.as_ptr() as *const std::os::raw::c_char;
+            *event_type = core::APP_LAYER_EVENT_TYPE_TRANSACTION;
+        };
         0
     } else {
         -1
@@ -426,12 +431,13 @@ pub unsafe extern "C" fn rs_ssh_state_get_event_info_by_id(
 pub extern "C" fn rs_ssh_state_new(_orig_state: *mut std::os::raw::c_void, _orig_proto: AppProto) -> *mut std::os::raw::c_void {
     let state = SSHState::new();
     let boxed = Box::new(state);
-    return Box::into_raw(boxed) as *mut _;
+    return unsafe { transmute(boxed) };
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_state_free(state: *mut std::os::raw::c_void) {
-    std::mem::drop(Box::from_raw(state as *mut SSHState));
+pub extern "C" fn rs_ssh_state_free(state: *mut std::os::raw::c_void) {
+    // Just unbox...
+    let _drop: Box<SSHState> = unsafe { transmute(state) };
 }
 
 #[no_mangle]
@@ -440,7 +446,7 @@ pub extern "C" fn rs_ssh_state_tx_free(_state: *mut std::os::raw::c_void, _tx_id
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_parse_request(
+pub extern "C" fn rs_ssh_parse_request(
     _flow: *const Flow, state: *mut std::os::raw::c_void, pstate: *mut std::os::raw::c_void,
     input: *const u8, input_len: u32, _data: *const std::os::raw::c_void, _flags: u8,
 ) -> AppLayerResult {
@@ -455,7 +461,7 @@ pub unsafe extern "C" fn rs_ssh_parse_request(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_parse_response(
+pub extern "C" fn rs_ssh_parse_response(
     _flow: *const Flow, state: *mut std::os::raw::c_void, pstate: *mut std::os::raw::c_void,
     input: *const u8, input_len: u32, _data: *const std::os::raw::c_void, _flags: u8,
 ) -> AppLayerResult {
@@ -470,11 +476,11 @@ pub unsafe extern "C" fn rs_ssh_parse_response(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_state_get_tx(
+pub extern "C" fn rs_ssh_state_get_tx(
     state: *mut std::os::raw::c_void, _tx_id: u64,
 ) -> *mut std::os::raw::c_void {
     let state = cast_pointer!(state, SSHState);
-    return &state.transaction as *const _ as *mut _;
+    return unsafe { transmute(&state.transaction) };
 }
 
 #[no_mangle]
@@ -483,7 +489,7 @@ pub extern "C" fn rs_ssh_state_get_tx_count(_state: *mut std::os::raw::c_void) -
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_tx_get_flags(
+pub extern "C" fn rs_ssh_tx_get_flags(
     tx: *mut std::os::raw::c_void, direction: u8,
 ) -> SSHConnectionState {
     let tx = cast_pointer!(tx, SSHTransaction);
@@ -495,7 +501,7 @@ pub unsafe extern "C" fn rs_ssh_tx_get_flags(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_tx_get_alstate_progress(
+pub extern "C" fn rs_ssh_tx_get_alstate_progress(
     tx: *mut std::os::raw::c_void, direction: u8,
 ) -> std::os::raw::c_int {
     let tx = cast_pointer!(tx, SSHTransaction);
@@ -584,7 +590,7 @@ pub extern "C" fn rs_ssh_hassh_is_enabled() -> bool {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_ssh_tx_get_log_condition( tx: *mut std::os::raw::c_void) -> bool {
+pub extern "C" fn rs_ssh_tx_get_log_condition( tx: *mut std::os::raw::c_void) -> bool {
     let tx = cast_pointer!(tx, SSHTransaction);
     
     if rs_ssh_hassh_is_enabled() {

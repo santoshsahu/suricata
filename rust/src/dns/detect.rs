@@ -42,7 +42,7 @@ fn parse_opcode(opcode: &str) -> Result<DetectDnsOpcode, ()> {
                 negated = true;
             }
             _ => {
-                let code: u8 = (&opcode[i..]).parse().map_err(|_| ())?;
+                let code: u8 = (&opcode[i..]).parse().or_else(|_| Err(()))?;
                 return Ok(DetectDnsOpcode {
                     negate: negated,
                     opcode: code,
@@ -107,8 +107,8 @@ pub unsafe extern "C" fn rs_detect_dns_opcode_parse(carg: *const c_char) -> *mut
         }
     };
 
-    match parse_opcode(arg) {
-        Ok(detect) => Box::into_raw(Box::new(detect)) as *mut _,
+    match parse_opcode(&arg) {
+        Ok(detect) => std::mem::transmute(Box::new(detect)),
         Err(_) => std::ptr::null_mut(),
     }
 }
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn rs_detect_dns_opcode_parse(carg: *const c_char) -> *mut
 #[no_mangle]
 pub unsafe extern "C" fn rs_dns_detect_opcode_free(ptr: *mut c_void) {
     if ptr != std::ptr::null_mut() {
-        std::mem::drop(Box::from_raw(ptr as *mut DetectDnsOpcode));
+        let _: Box<DetectDnsOpcode> = std::mem::transmute(ptr);
     }
 }
 

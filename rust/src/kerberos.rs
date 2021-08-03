@@ -56,7 +56,7 @@ pub struct Kerberos5Ticket {
 
 fn parse_kerberos5_request_do(blob: &[u8]) -> IResult<&[u8], ApReq, SecBlobError>
 {
-    let (_,b) = der_parser::parse_der(blob).map_err(nom::Err::convert)?;
+    let (_,b) = der_parser::parse_der(blob).map_err(|e| nom::Err::convert(e))?;
     let blob = b.as_slice().or(
         Err(nom::Err::Error(SecBlobError::KrbFmtError))
     )?;
@@ -71,7 +71,7 @@ fn parse_kerberos5_request_do(blob: &[u8]) -> IResult<&[u8], ApReq, SecBlobError
             ap_req
         })
     )
-    .map_err(nom::Err::convert)
+    .map_err(|e| nom::Err::convert(e))
 }
 
 pub fn parse_kerberos5_request(blob: &[u8]) -> IResult<&[u8], Kerberos5Ticket, SecBlobError>

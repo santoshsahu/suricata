@@ -67,13 +67,15 @@ pub extern "C" fn rs_mqtt_tx_has_type(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_cstr_message_code(
+pub extern "C" fn rs_mqtt_cstr_message_code(
     str: *const std::os::raw::c_char,
 ) -> std::os::raw::c_int {
-    let msgtype: &CStr = CStr::from_ptr(str);
-    if let Ok(s) = msgtype.to_str() {
-        if let Ok(x) = MQTTTypeCode::from_str(s) {
-            return x as i32;
+    unsafe {
+        let msgtype: &CStr = CStr::from_ptr(str);
+        if let Ok(s) = msgtype.to_str() {
+            if let Ok(x) = MQTTTypeCode::from_str(s) {
+                return x as i32;
+            }
         }
     }
     return -1;
@@ -143,7 +145,7 @@ pub extern "C" fn rs_mqtt_tx_has_connect_flags(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_connect_clientid(
+pub extern "C" fn rs_mqtt_tx_get_connect_clientid(
     tx: &MQTTTransaction,
     buffer: *mut *const u8,
     buffer_len: *mut u32,
@@ -152,20 +154,24 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_connect_clientid(
         if let MQTTOperation::CONNECT(ref cv) = msg.op {
             let p = &cv.client_id;
             if p.len() > 0 {
-                *buffer = p.as_ptr();
-                *buffer_len = p.len() as u32;
+                unsafe {
+                    *buffer = p.as_ptr();
+                    *buffer_len = p.len() as u32;
+                }
                 return 1;
             }
         }
     }
 
-    *buffer = ptr::null();
-    *buffer_len = 0;
+    unsafe {
+        *buffer = ptr::null();
+        *buffer_len = 0;
+    }
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_connect_username(
+pub extern "C" fn rs_mqtt_tx_get_connect_username(
     tx: &MQTTTransaction,
     buffer: *mut *const u8,
     buffer_len: *mut u32,
@@ -174,22 +180,26 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_connect_username(
         if let MQTTOperation::CONNECT(ref cv) = msg.op {
             if let Some(p) = &cv.username {
                 if p.len() > 0 {
-                    *buffer = p.as_ptr();
-                    *buffer_len = p.len() as u32;
+                    unsafe {
+                        *buffer = p.as_ptr();
+                        *buffer_len = p.len() as u32;
+                    }
                     return 1;
                 }
             }
         }
     }
 
-    *buffer = ptr::null();
-    *buffer_len = 0;
+    unsafe {
+        *buffer = ptr::null();
+        *buffer_len = 0;
+    }
 
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_connect_password(
+pub extern "C" fn rs_mqtt_tx_get_connect_password(
     tx: &MQTTTransaction,
     buffer: *mut *const u8,
     buffer_len: *mut u32,
@@ -198,21 +208,25 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_connect_password(
         if let MQTTOperation::CONNECT(ref cv) = msg.op {
             if let Some(p) = &cv.password {
                 if p.len() > 0 {
-                    *buffer = p.as_ptr();
-                    *buffer_len = p.len() as u32;
+                    unsafe {
+                        *buffer = p.as_ptr();
+                        *buffer_len = p.len() as u32;
+                    }
                     return 1;
                 }
             }
         }
     }
 
-    *buffer = ptr::null();
-    *buffer_len = 0;
+    unsafe {
+        *buffer = ptr::null();
+        *buffer_len = 0;
+    }
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_connect_willtopic(
+pub extern "C" fn rs_mqtt_tx_get_connect_willtopic(
     tx: &MQTTTransaction,
     buffer: *mut *const u8,
     buffer_len: *mut u32,
@@ -221,22 +235,26 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_connect_willtopic(
         if let MQTTOperation::CONNECT(ref cv) = msg.op {
             if let Some(p) = &cv.will_topic {
                 if p.len() > 0 {
-                    *buffer = p.as_ptr();
-                    *buffer_len = p.len() as u32;
+                    unsafe {
+                        *buffer = p.as_ptr();
+                        *buffer_len = p.len() as u32;
+                    }
                     return 1;
                 }
             }
         }
     }
 
-    *buffer = ptr::null();
-    *buffer_len = 0;
+    unsafe {
+        *buffer = ptr::null();
+        *buffer_len = 0;
+    }
 
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_connect_willmessage(
+pub extern "C" fn rs_mqtt_tx_get_connect_willmessage(
     tx: &MQTTTransaction,
     buffer: *mut *const u8,
     buffer_len: *mut u32,
@@ -245,28 +263,34 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_connect_willmessage(
         if let MQTTOperation::CONNECT(ref cv) = msg.op {
             if let Some(p) = &cv.will_message {
                 if p.len() > 0 {
-                    *buffer = p.as_ptr();
-                    *buffer_len = p.len() as u32;
+                    unsafe {
+                        *buffer = p.as_ptr();
+                        *buffer_len = p.len() as u32;
+                    }
                     return 1;
                 }
             }
         }
     }
 
-    *buffer = ptr::null();
-    *buffer_len = 0;
+    unsafe {
+        *buffer = ptr::null();
+        *buffer_len = 0;
+    }
 
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_connack_sessionpresent(
+pub extern "C" fn rs_mqtt_tx_get_connack_sessionpresent(
     tx: &MQTTTransaction,
     session_present: *mut bool,
 ) -> u8 {
     for msg in tx.msg.iter() {
         if let MQTTOperation::CONNACK(ref ca) = msg.op {
-            *session_present = ca.session_present;
+            unsafe {
+                *session_present = ca.session_present;
+            }
             return 1;
         }
     }
@@ -274,7 +298,7 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_connack_sessionpresent(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_publish_topic(
+pub extern "C" fn rs_mqtt_tx_get_publish_topic(
     tx: &MQTTTransaction,
     buffer: *mut *const u8,
     buffer_len: *mut u32,
@@ -283,21 +307,25 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_publish_topic(
         if let MQTTOperation::PUBLISH(ref pubv) = msg.op {
             let p = &pubv.topic;
             if p.len() > 0 {
-                *buffer = p.as_ptr();
-                *buffer_len = p.len() as u32;
+                unsafe {
+                    *buffer = p.as_ptr();
+                    *buffer_len = p.len() as u32;
+                }
                 return 1;
             }
         }
     }
 
-    *buffer = ptr::null();
-    *buffer_len = 0;
+    unsafe {
+        *buffer = ptr::null();
+        *buffer_len = 0;
+    }
 
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_publish_message(
+pub extern "C" fn rs_mqtt_tx_get_publish_message(
     tx: &MQTTTransaction,
     buffer: *mut *const u8,
     buffer_len: *mut u32,
@@ -306,21 +334,25 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_publish_message(
         if let MQTTOperation::PUBLISH(ref pubv) = msg.op {
             let p = &pubv.message;
             if p.len() > 0 {
-                *buffer = p.as_ptr();
-                *buffer_len = p.len() as u32;
+                unsafe {
+                    *buffer = p.as_ptr();
+                    *buffer_len = p.len() as u32;
+                }
                 return 1;
             }
         }
     }
 
-    *buffer = ptr::null();
-    *buffer_len = 0;
+    unsafe {
+        *buffer = ptr::null();
+        *buffer_len = 0;
+    }
 
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_subscribe_topic(tx: &MQTTTransaction,
+pub extern "C" fn rs_mqtt_tx_get_subscribe_topic(tx: &MQTTTransaction,
     i: u32,
     buf: *mut *const u8,
     len: *mut u32)
@@ -332,8 +364,10 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_subscribe_topic(tx: &MQTTTransaction,
             if (i as usize) < subv.topics.len() + offset {
                 let topic = &subv.topics[(i as usize) - offset];
                 if topic.topic_name.len() > 0 {
-                    *len = topic.topic_name.len() as u32;
-                    *buf = topic.topic_name.as_ptr();
+                    unsafe {
+                        *len = topic.topic_name.len() as u32;
+                        *buf = topic.topic_name.as_ptr();
+                    }
                     return 1;
                 }
             } else {
@@ -342,14 +376,16 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_subscribe_topic(tx: &MQTTTransaction,
         }
     }
 
-    *buf = ptr::null();
-    *len = 0;
+    unsafe {
+        *buf = ptr::null();
+        *len = 0;
+    }
 
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_unsubscribe_topic(tx: &MQTTTransaction,
+pub extern "C" fn rs_mqtt_tx_get_unsubscribe_topic(tx: &MQTTTransaction,
     i: u32,
     buf: *mut *const u8,
     len: *mut u32)
@@ -361,8 +397,10 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_unsubscribe_topic(tx: &MQTTTransaction,
             if (i as usize) < unsubv.topics.len() + offset {
                 let topic = &unsubv.topics[(i as usize) - offset];
                 if topic.len() > 0 {
-                    *len = topic.len() as u32;
-                    *buf = topic.as_ptr();
+                    unsafe {
+                        *len = topic.len() as u32;
+                        *buf = topic.as_ptr();
+                    }
                     return 1;
                 }
             } else {
@@ -371,14 +409,16 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_unsubscribe_topic(tx: &MQTTTransaction,
         }
     }
 
-    *buf = ptr::null();
-    *len = 0;
+    unsafe {
+        *buf = ptr::null();
+        *len = 0;
+    }
 
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mqtt_tx_get_reason_code(
+pub extern "C" fn rs_mqtt_tx_get_reason_code(
     tx: &MQTTTransaction,
     result: *mut u8,
 ) -> u8 {
@@ -389,21 +429,29 @@ pub unsafe extern "C" fn rs_mqtt_tx_get_reason_code(
             | MQTTOperation::PUBREC(ref v)
             | MQTTOperation::PUBCOMP(ref v) => {
                 if let Some(rcode) = v.reason_code {
-                    *result = rcode;
+                    unsafe {
+                        *result = rcode;
+                    }
                     return 1;
                 }
             }
             MQTTOperation::AUTH(ref v) => {
-                *result = v.reason_code;
+                unsafe {
+                    *result = v.reason_code;
+                }
                 return 1;
             }
             MQTTOperation::CONNACK(ref v) => {
-                *result = v.return_code;
+                unsafe {
+                    *result = v.return_code;
+                }
                 return 1;
             }
             MQTTOperation::DISCONNECT(ref v) => {
                 if let Some(rcode) = v.reason_code {
-                    *result = rcode;
+                    unsafe {
+                        *result = rcode;
+                    }
                     return 1;
                 }
             }
@@ -472,23 +520,23 @@ mod test {
         });
         let mut s: *const u8 = std::ptr::null_mut();
         let mut slen: u32 = 0;
-        let mut r = unsafe{rs_mqtt_tx_get_unsubscribe_topic(&t, 0, &mut s, &mut slen)};
+        let mut r = rs_mqtt_tx_get_unsubscribe_topic(&t, 0, &mut s, &mut slen);
         assert_eq!(r, 1);
-        let mut topic = String::from_utf8_lossy(unsafe{build_slice!(s, slen as usize)});
+        let mut topic = String::from_utf8_lossy(build_slice!(s, slen as usize));
         assert_eq!(topic, "foo");
-        r = unsafe{rs_mqtt_tx_get_unsubscribe_topic(&t, 1, &mut s, &mut slen)};
+        r = rs_mqtt_tx_get_unsubscribe_topic(&t, 1, &mut s, &mut slen);
         assert_eq!(r, 1);
-        topic = String::from_utf8_lossy(unsafe{build_slice!(s, slen as usize)});
+        topic = String::from_utf8_lossy(build_slice!(s, slen as usize));
         assert_eq!(topic, "baar");
-        r = unsafe{rs_mqtt_tx_get_unsubscribe_topic(&t, 2, &mut s, &mut slen)};
+        r = rs_mqtt_tx_get_unsubscribe_topic(&t, 2, &mut s, &mut slen);
         assert_eq!(r, 1);
-        topic = String::from_utf8_lossy(unsafe{build_slice!(s, slen as usize)});
+        topic = String::from_utf8_lossy(build_slice!(s, slen as usize));
         assert_eq!(topic, "fieee");
-        r = unsafe{rs_mqtt_tx_get_unsubscribe_topic(&t, 3, &mut s, &mut slen)};
+        r = rs_mqtt_tx_get_unsubscribe_topic(&t, 3, &mut s, &mut slen);
         assert_eq!(r, 1);
-        topic = String::from_utf8_lossy(unsafe{build_slice!(s, slen as usize)});
+        topic = String::from_utf8_lossy(build_slice!(s, slen as usize));
         assert_eq!(topic, "baaaaz");
-        r = unsafe{rs_mqtt_tx_get_unsubscribe_topic(&t, 4, &mut s, &mut slen)};
+        r = rs_mqtt_tx_get_unsubscribe_topic(&t, 4, &mut s, &mut slen);
         assert_eq!(r, 0);
     }
 
@@ -540,23 +588,23 @@ mod test {
         });
         let mut s: *const u8 = std::ptr::null_mut();
         let mut slen: u32 = 0;
-        let mut r = unsafe{rs_mqtt_tx_get_subscribe_topic(&t, 0, &mut s, &mut slen)};
+        let mut r = rs_mqtt_tx_get_subscribe_topic(&t, 0, &mut s, &mut slen);
         assert_eq!(r, 1);
-        let mut topic = String::from_utf8_lossy(unsafe{build_slice!(s, slen as usize)});
+        let mut topic = String::from_utf8_lossy(build_slice!(s, slen as usize));
         assert_eq!(topic, "foo");
-        r = unsafe{rs_mqtt_tx_get_subscribe_topic(&t, 1, &mut s, &mut slen)};
+        r = rs_mqtt_tx_get_subscribe_topic(&t, 1, &mut s, &mut slen);
         assert_eq!(r, 1);
-        topic = String::from_utf8_lossy(unsafe{build_slice!(s, slen as usize)});
+        topic = String::from_utf8_lossy(build_slice!(s, slen as usize));
         assert_eq!(topic, "baar");
-        r = unsafe{rs_mqtt_tx_get_subscribe_topic(&t, 2, &mut s, &mut slen)};
+        r = rs_mqtt_tx_get_subscribe_topic(&t, 2, &mut s, &mut slen);
         assert_eq!(r, 1);
-        topic = String::from_utf8_lossy(unsafe{build_slice!(s, slen as usize)});
+        topic = String::from_utf8_lossy(build_slice!(s, slen as usize));
         assert_eq!(topic, "fieee");
-        r = unsafe{rs_mqtt_tx_get_subscribe_topic(&t, 3, &mut s, &mut slen)};
+        r = rs_mqtt_tx_get_subscribe_topic(&t, 3, &mut s, &mut slen);
         assert_eq!(r, 1);
-        topic = String::from_utf8_lossy(unsafe{build_slice!(s, slen as usize)});
+        topic = String::from_utf8_lossy(build_slice!(s, slen as usize));
         assert_eq!(topic, "baaaaz");
-        r = unsafe{rs_mqtt_tx_get_subscribe_topic(&t, 4, &mut s, &mut slen)};
+        r = rs_mqtt_tx_get_subscribe_topic(&t, 4, &mut s, &mut slen);
         assert_eq!(r, 0);
     }
 }

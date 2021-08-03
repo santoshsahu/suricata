@@ -17,6 +17,7 @@
 
 use std;
 use crate::core::{self, ALPROTO_UNKNOWN, AppProto, Flow, IPPROTO_TCP};
+use std::mem::transmute;
 use crate::applayer::{self, *};
 use std::ffi::CString;
 use nom;
@@ -276,7 +277,7 @@ export_tx_set_detect_state!(
 
 /// C entry point for a probing parser.
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_probing_parser(
+pub extern "C" fn rs_template_probing_parser(
     _flow: *const Flow,
     _direction: u8,
     input: *const u8,
@@ -287,7 +288,7 @@ pub unsafe extern "C" fn rs_template_probing_parser(
     if input_len > 1 && input != std::ptr::null_mut() {
         let slice = build_slice!(input, input_len as usize);
         if probe(slice).is_ok() {
-            return ALPROTO_TEMPLATE;
+            return unsafe { ALPROTO_TEMPLATE };
         }
     }
     return ALPROTO_UNKNOWN;
@@ -297,16 +298,17 @@ pub unsafe extern "C" fn rs_template_probing_parser(
 pub extern "C" fn rs_template_state_new(_orig_state: *mut std::os::raw::c_void, _orig_proto: AppProto) -> *mut std::os::raw::c_void {
     let state = TemplateState::new();
     let boxed = Box::new(state);
-    return Box::into_raw(boxed) as *mut std::os::raw::c_void;
+    return unsafe { transmute(boxed) };
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_state_free(state: *mut std::os::raw::c_void) {
-    std::mem::drop(Box::from_raw(state as *mut TemplateState));
+pub extern "C" fn rs_template_state_free(state: *mut std::os::raw::c_void) {
+    // Just unbox...
+    let _drop: Box<TemplateState> = unsafe { transmute(state) };
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_state_tx_free(
+pub extern "C" fn rs_template_state_tx_free(
     state: *mut std::os::raw::c_void,
     tx_id: u64,
 ) {
@@ -315,7 +317,7 @@ pub unsafe extern "C" fn rs_template_state_tx_free(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_parse_request(
+pub extern "C" fn rs_template_parse_request(
     _flow: *const Flow,
     state: *mut std::os::raw::c_void,
     pstate: *mut std::os::raw::c_void,
@@ -324,10 +326,12 @@ pub unsafe extern "C" fn rs_template_parse_request(
     _data: *const std::os::raw::c_void,
     _flags: u8,
 ) -> AppLayerResult {
-    let eof = if AppLayerParserStateIssetFlag(pstate, APP_LAYER_PARSER_EOF_TS) > 0 {
-        true
-    } else {
-        false
+    let eof = unsafe {
+        if AppLayerParserStateIssetFlag(pstate, APP_LAYER_PARSER_EOF_TS) > 0 {
+            true
+        } else {
+            false
+        }
     };
 
     if eof {
@@ -349,7 +353,7 @@ pub unsafe extern "C" fn rs_template_parse_request(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_parse_response(
+pub extern "C" fn rs_template_parse_response(
     _flow: *const Flow,
     state: *mut std::os::raw::c_void,
     pstate: *mut std::os::raw::c_void,
@@ -358,10 +362,12 @@ pub unsafe extern "C" fn rs_template_parse_response(
     _data: *const std::os::raw::c_void,
     _flags: u8,
 ) -> AppLayerResult {
-    let _eof = if AppLayerParserStateIssetFlag(pstate, APP_LAYER_PARSER_EOF_TC) > 0 {
-        true
-    } else {
-        false
+    let _eof = unsafe {
+        if AppLayerParserStateIssetFlag(pstate, APP_LAYER_PARSER_EOF_TC) > 0 {
+            true
+        } else {
+            false
+        }
     };
     let state = cast_pointer!(state, TemplateState);
 
@@ -372,19 +378,19 @@ pub unsafe extern "C" fn rs_template_parse_response(
         AppLayerResult::ok()
     } else {
         let buf = build_slice!(input, input_len as usize);
-        state.parse_response(buf)
+        state.parse_response(buf).into()
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_state_get_tx(
+pub extern "C" fn rs_template_state_get_tx(
     state: *mut std::os::raw::c_void,
     tx_id: u64,
 ) -> *mut std::os::raw::c_void {
     let state = cast_pointer!(state, TemplateState);
     match state.get_tx(tx_id) {
         Some(tx) => {
-            return tx as *const _ as *mut _;
+            return unsafe { transmute(tx) };
         }
         None => {
             return std::ptr::null_mut();
@@ -393,7 +399,7 @@ pub unsafe extern "C" fn rs_template_state_get_tx(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_state_get_tx_count(
+pub extern "C" fn rs_template_state_get_tx_count(
     state: *mut std::os::raw::c_void,
 ) -> u64 {
     let state = cast_pointer!(state, TemplateState);
@@ -401,7 +407,7 @@ pub unsafe extern "C" fn rs_template_state_get_tx_count(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_tx_get_alstate_progress(
+pub extern "C" fn rs_template_tx_get_alstate_progress(
     tx: *mut std::os::raw::c_void,
     _direction: u8,
 ) -> std::os::raw::c_int {
@@ -415,7 +421,7 @@ pub unsafe extern "C" fn rs_template_tx_get_alstate_progress(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_state_get_events(
+pub extern "C" fn rs_template_state_get_events(
     tx: *mut std::os::raw::c_void
 ) -> *mut core::AppLayerDecoderEvents {
     let tx = cast_pointer!(tx, TemplateTransaction);
@@ -439,7 +445,7 @@ pub extern "C" fn rs_template_state_get_event_info_by_id(_event_id: std::os::raw
     return -1;
 }
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_state_get_tx_iterator(
+pub extern "C" fn rs_template_state_get_tx_iterator(
     _ipproto: u8,
     _alproto: AppProto,
     state: *mut std::os::raw::c_void,
@@ -450,7 +456,7 @@ pub unsafe extern "C" fn rs_template_state_get_tx_iterator(
     let state = cast_pointer!(state, TemplateState);
     match state.tx_iterator(min_tx_id, istate) {
         Some((tx, out_tx_id, has_next)) => {
-            let c_tx = tx as *const _ as *mut _;
+            let c_tx = unsafe { transmute(tx) };
             let ires = applayer::AppLayerGetTxIterTuple::with_values(
                 c_tx,
                 out_tx_id,
@@ -469,7 +475,7 @@ pub unsafe extern "C" fn rs_template_state_get_tx_iterator(
 /// No required for parsing, but an example function for retrieving a
 /// pointer to the request buffer from C for detection.
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_get_request_buffer(
+pub extern "C" fn rs_template_get_request_buffer(
     tx: *mut std::os::raw::c_void,
     buf: *mut *const u8,
     len: *mut u32,
@@ -478,8 +484,10 @@ pub unsafe extern "C" fn rs_template_get_request_buffer(
     let tx = cast_pointer!(tx, TemplateTransaction);
     if let Some(ref request) = tx.request {
         if request.len() > 0 {
-            *len = request.len() as u32;
-            *buf = request.as_ptr();
+            unsafe {
+                *len = request.len() as u32;
+                *buf = request.as_ptr();
+            }
             return 1;
         }
     }
@@ -488,7 +496,7 @@ pub unsafe extern "C" fn rs_template_get_request_buffer(
 
 /// Get the response buffer for a transaction from C.
 #[no_mangle]
-pub unsafe extern "C" fn rs_template_get_response_buffer(
+pub extern "C" fn rs_template_get_response_buffer(
     tx: *mut std::os::raw::c_void,
     buf: *mut *const u8,
     len: *mut u32,
@@ -497,8 +505,10 @@ pub unsafe extern "C" fn rs_template_get_response_buffer(
     let tx = cast_pointer!(tx, TemplateTransaction);
     if let Some(ref response) = tx.response {
         if response.len() > 0 {
-            *len = response.len() as u32;
-            *buf = response.as_ptr();
+            unsafe {
+                *len = response.len() as u32;
+                *buf = response.as_ptr();
+            }
             return 1;
         }
     }

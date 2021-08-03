@@ -15,7 +15,6 @@
  * 02110-1301, USA.
  */
 
-use std;
 use crate::core::*;
 use crate::filetracker::*;
 use crate::filecontainer::*;
@@ -51,7 +50,7 @@ pub fn filetracker_newchunk(ft: &mut FileTransferTracker, files: &mut FileContai
 {
     match unsafe {SURICATA_SMB_FILE_CONFIG} {
         Some(sfcm) => {
-            ft.new_chunk(sfcm, files, flags, name, data, chunk_offset,
+            ft.new_chunk(sfcm, files, flags, &name, data, chunk_offset,
                     chunk_size, fill_bytes, is_last, xid); }
         None => panic!("no SURICATA_SMB_FILE_CONFIG"),
     }
@@ -112,7 +111,7 @@ impl SMBState {
     }
     fn setfileflags(&mut self, direction: u8, flags: u16) {
         SCLogDebug!("direction: {}, flags: {}", direction, flags);
-        if direction == STREAM_TOCLIENT {
+        if direction == 1 {
             self.files.flags_tc = flags;
         } else {
             self.files.flags_ts = flags;
@@ -190,16 +189,16 @@ impl SMBState {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_smb_getfiles(ptr: *mut std::ffi::c_void, direction: u8) -> * mut FileContainer {
+pub extern "C" fn rs_smb_getfiles(direction: u8, ptr: *mut SMBState) -> * mut FileContainer {
     if ptr.is_null() { panic!("NULL ptr"); };
-    let parser = cast_pointer!(ptr, SMBState);
+    let parser = unsafe { &mut *ptr };
     parser.getfiles(direction)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_smb_setfileflags(direction: u8, ptr: *mut SMBState, flags: u16) {
+pub extern "C" fn rs_smb_setfileflags(direction: u8, ptr: *mut SMBState, flags: u16) {
     if ptr.is_null() { panic!("NULL ptr"); };
-    let parser = &mut *ptr;
+    let parser = unsafe { &mut *ptr };
     SCLogDebug!("direction {} flags {}", direction, flags);
     parser.setfileflags(direction, flags)
 }

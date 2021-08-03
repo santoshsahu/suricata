@@ -479,13 +479,22 @@ named! { pub parse_sa_attribute<&[u8], Vec<SaAttribute>>,
                         numeric_value: match format.0 {
                             1 => Some(attribute_length_or_value as u32),
                             0 => {
-                                numeric_variable_value
+                                if let Some(_numeric_variable_value) = numeric_variable_value {
+                                    Some(_numeric_variable_value)
+                                }
+                                else {
+                                    None
+                                }
                             },
                             _ => None,
                         },
                         hex_value: match format.0 {
                             0 => {
-                                variable_attribute_value.map(|_variable_attribute_value| to_hex(_variable_attribute_value))
+                                if let Some(_variable_attribute_value) = variable_attribute_value {
+                                    Some(to_hex(_variable_attribute_value))
+                                } else {
+                                    None
+                                }
                             }
                             _ => None,
                         }
