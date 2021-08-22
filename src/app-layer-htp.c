@@ -1949,6 +1949,7 @@ static int HTPCallbackResponseBodyData(htp_tx_data_t *d)
     if (tx_ud == NULL) {
         SCReturnInt(HTP_OK);
     }
+    TimeGet(&tx_ud->response_end_timestamp);
     if (!tx_ud->request_body_init) {
         tx_ud->request_body_init = 1;
     }
@@ -2116,6 +2117,7 @@ static int HTPCallbackResponseStart(htp_tx_t *tx)
         }
         htp_tx_set_user_data(tx, tx_ud);
     }
+    TimeGet(&tx_ud->response_end_timestamp);
     SCReturnInt(HTP_OK);
 }
 
