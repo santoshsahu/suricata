@@ -2089,7 +2089,7 @@ static int HTPCallbackRequestStart(htp_tx_t *tx)
         }
         htp_tx_set_user_data(tx, tx_ud);
     }
-    TimeGet(tx_ud->request_start_timestamp);
+    TimeGet(&tx_ud->request_start_timestamp);
     SCReturnInt(HTP_OK);
 }
 
@@ -2188,7 +2188,7 @@ static int HTPCallbackResponse(htp_tx_t *tx)
             SCLogDebug("closing file that was being stored");
             (void)HTPFileClose(hstate, NULL, 0, 0, STREAM_TOCLIENT);
             htud->tcflags &= ~HTP_FILENAME_SET;
-            TimeGet(htud->response_end_timestamp);
+            TimeGet(&htud->response_end_timestamp);
         }
     }
 
