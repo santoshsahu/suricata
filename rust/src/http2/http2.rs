@@ -138,8 +138,8 @@ pub struct HTTP2Transaction {
     ft_tc: FileTransferTracker,
     ft_ts: FileTransferTracker,
 
-    startTime: u64,
-    endTime: u64,
+    startTime: u128,
+    endTime: u128,
 
     //temporary escaped header for detection
     //must be attached to transaction for memory management (be freed at the right time)
@@ -279,8 +279,8 @@ impl HTTP2Transaction {
                                 self.state = HTTP2TransactionState::HTTP2StateHalfClosedClient;
                             }
                         }
-                        let start = SystemTime::now();
-                        let since_the_epoch = start
+                        let startTime = SystemTime::now();
+                        let since_the_epoch = startTime
                            .duration_since(UNIX_EPOCH)
                            .expect("Time went backwards");
                            self.endTime = since_the_epoch.as_millis();
@@ -500,8 +500,8 @@ impl HTTP2State {
             tx.tx_id = self.tx_id;
             tx.stream_id = sid;
             tx.state = HTTP2TransactionState::HTTP2StateOpen;
-            let start = SystemTime::now();
-            let since_the_epoch = start
+            let startTime = SystemTime::now();
+            let since_the_epoch = startTime
                .duration_since(UNIX_EPOCH)
                .expect("Time went backwards");
             tx.startTime = since_the_epoch.as_millis();
