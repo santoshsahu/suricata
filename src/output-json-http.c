@@ -474,6 +474,10 @@ static void EveHttpLogJSON(JsonHttpLogThread *aft, JsonBuilder *js, htp_tx_t *tx
     if (htud != NULL) {
         BodyPrintableBuffer(js, &htud->request_body, "http_request_body_printable");
         BodyPrintableBuffer(js, &htud->response_body, "http_response_body_printable");
+        struct timespec req_time = FROM_TIMEVAL(htud->request_start_timestamp);
+        struct timespec res_time = FROM_TIMEVAL(htud->response_end_timestamp);
+        jb_set_uint(js, "request_start_timestamp", SCTimespecAsEpochMillis(&req_time));
+        jb_set_uint(js, "response_end_timestamp", SCTimespecAsEpochMillis(&res_time));	
     }
     jb_close(js);
 }
