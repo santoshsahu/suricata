@@ -263,8 +263,8 @@ fn log_http2(tx: &HTTP2Transaction, js: &mut JsonBuilder) -> Result<bool, JsonEr
 
     // Close http2.
     js.close()?;
-    js.set_uint("request_start_timestamp", &tx.startTime as u64);
-    js.set_uint("response_end_timestamp", &tx.endTime as u64);
+    js.set_uint("request_start_timestamp", &tx.startTime);
+    js.set_uint("response_end_timestamp", &tx.endTime);
 
     return Ok(has_request || has_response || has_headers);
 }
