@@ -138,8 +138,8 @@ pub struct HTTP2Transaction {
     ft_tc: FileTransferTracker,
     ft_ts: FileTransferTracker,
 
-    pub start_time: u64,
-    pub end_time: u64,
+    pub start_time: u128,
+    pub end_time: u128,
 
     //temporary escaped header for detection
     //must be attached to transaction for memory management (be freed at the right time)
