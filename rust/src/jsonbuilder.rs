@@ -456,7 +456,7 @@ impl JsonBuilder {
     }
 
     /// Set a key and an unsigned integer type on an object.
-    pub fn set_uint128(&mut self, key: &str, val: uu12864) -> Result<&mut Self, JsonError> {
+    pub fn set_uint128(&mut self, key: &str, val: u128) -> Result<&mut Self, JsonError> {
         match self.current_state() {
             State::ObjectNth => {
                 self.buf.push(',');
