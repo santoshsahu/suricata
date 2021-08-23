@@ -162,6 +162,8 @@ impl HTTP2Transaction {
             ft_tc: FileTransferTracker::new(),
             ft_ts: FileTransferTracker::new(),
             escaped: Vec::with_capacity(16),
+            startTime: 0,
+            endTime: 0,
         }
     }
 
@@ -279,12 +281,12 @@ impl HTTP2Transaction {
                                 self.state = HTTP2TransactionState::HTTP2StateHalfClosedClient;
                             }
                         }
-                        let startTime = SystemTime::now();
-                        let since_the_epoch = startTime
-                           .duration_since(UNIX_EPOCH)
-                           .expect("Time went backwards");
-                           self.endTime = since_the_epoch.as_millis();
                     }
+                    let startTime = SystemTime::now();
+                    let since_the_epoch = startTime
+                        .duration_since(UNIX_EPOCH)
+                        .expect("Time went backwards");
+                    self.endTime = since_the_epoch.as_millis();
                 } else if header.ftype == parser::HTTP2FrameType::DATA as u8 {
                     //not end of stream
                     if dir == STREAM_TOSERVER {
