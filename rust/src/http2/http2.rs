@@ -30,6 +30,7 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
 use std::mem::transmute;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 static mut ALPROTO_HTTP2: AppProto = ALPROTO_UNKNOWN;
 
@@ -136,6 +137,9 @@ pub struct HTTP2Transaction {
     tx_data: AppLayerTxData,
     ft_tc: FileTransferTracker,
     ft_ts: FileTransferTracker,
+
+    startTime: u64,
+    endTime: u64,
 
     //temporary escaped header for detection
     //must be attached to transaction for memory management (be freed at the right time)
@@ -275,6 +279,11 @@ impl HTTP2Transaction {
                                 self.state = HTTP2TransactionState::HTTP2StateHalfClosedClient;
                             }
                         }
+                        let start = SystemTime::now();
+                        let since_the_epoch = start
+                           .duration_since(UNIX_EPOCH)
+                           .expect("Time went backwards");
+                           self.endTime = since_the_epoch.as_millis();
                     }
                 } else if header.ftype == parser::HTTP2FrameType::DATA as u8 {
                     //not end of stream
@@ -491,6 +500,11 @@ impl HTTP2State {
             tx.tx_id = self.tx_id;
             tx.stream_id = sid;
             tx.state = HTTP2TransactionState::HTTP2StateOpen;
+            let start = SystemTime::now();
+            let since_the_epoch = start
+               .duration_since(UNIX_EPOCH)
+               .expect("Time went backwards");
+            tx.startTime = since_the_epoch.as_millis();
             self.transactions.push(tx);
             return self.transactions.last_mut().unwrap();
         }
