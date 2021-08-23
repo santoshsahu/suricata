@@ -138,8 +138,8 @@ pub struct HTTP2Transaction {
     ft_tc: FileTransferTracker,
     ft_ts: FileTransferTracker,
 
-    pub startTime: u128,
-    pub endTime: u128,
+    pub start_time: u64,
+    pub end_time: u64,
 
     //temporary escaped header for detection
     //must be attached to transaction for memory management (be freed at the right time)
@@ -162,8 +162,8 @@ impl HTTP2Transaction {
             ft_tc: FileTransferTracker::new(),
             ft_ts: FileTransferTracker::new(),
             escaped: Vec::with_capacity(16),
-            startTime: 0,
-            endTime: 0,
+            start_time: 0,
+            end_time: 0,
         }
     }
 
@@ -282,11 +282,11 @@ impl HTTP2Transaction {
                             }
                         }
                     }
-                    let startTime = SystemTime::now();
-                    let since_the_epoch = startTime
+                    let start_time = SystemTime::now();
+                    let since_the_epoch = start_time
                         .duration_since(UNIX_EPOCH)
                         .expect("Time went backwards");
-                    self.endTime = since_the_epoch.as_millis();
+                    self.end_time = since_the_epoch.as_millis();
                 } else if header.ftype == parser::HTTP2FrameType::DATA as u8 {
                     //not end of stream
                     if dir == STREAM_TOSERVER {
@@ -502,11 +502,11 @@ impl HTTP2State {
             tx.tx_id = self.tx_id;
             tx.stream_id = sid;
             tx.state = HTTP2TransactionState::HTTP2StateOpen;
-            let startTime = SystemTime::now();
-            let since_the_epoch = startTime
+            let start_time = SystemTime::now();
+            let since_the_epoch = start_time
                .duration_since(UNIX_EPOCH)
                .expect("Time went backwards");
-            tx.startTime = since_the_epoch.as_millis();
+            tx.start_time = since_the_epoch.as_millis();
             self.transactions.push(tx);
             return self.transactions.last_mut().unwrap();
         }
