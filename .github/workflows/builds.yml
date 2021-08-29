@@ -40,7 +40,7 @@ jobs:
       - run: make -j2
       - run: make install
       - run: ./make-rpm.sh
-      - name: Uploading prep archive
+      - name: Uploading rpm
         uses: actions/upload-artifact@v2
         with:
           name: suricata-7.0.0.amzn2.x86_64.rpm

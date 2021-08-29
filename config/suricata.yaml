@@ -270,9 +270,9 @@ rule-files:
 # Auxiliary configuration files.
 #
 
-classification-file: /usr/local/etc/suricata/classification.config
-reference-config-file: /usr/local/etc/suricata/reference.config
-threshold-file: /usr/local/etc/suricata/threshold.config
+classification-file: /etc/suricata/classification.config
+reference-config-file: /etc/suricata/reference.config
+threshold-file: /etc/suricata/threshold.config
 
 ##
 ## Include other configs
