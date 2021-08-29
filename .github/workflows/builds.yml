@@ -46,5 +46,56 @@ jobs:
           name: suricata-7.0.0.amzn2.x86_64-beta.rpm-amzn2
           path: ./build/rpmbuild/RPMS/x86_64/*.rpm
 
+  publish-rpms-prerelease:
+    runs-on: ubuntu-20.04
+    needs: [ amazon-linux ]
+    if: github.ref == 'refs/heads/tmm'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Create rpm directories
+        run: mkdir -p ./build/rpms/amazon-linux2
+      - name: Download RPM amazon-linux2
+        uses: actions/download-artifact@v2
+        with:
+          name: suricata-7.0.0.amzn2.x86_64-beta.rpm-amzn2
+          path: build/rpms/amazon-linux2/
+      - name: Publish RPM centos7
+        run: |
+          for PACKAGE_NAME in `ls build/rpms/amazon-linux2/*.rpm`; do
+            FILE="$(basename -- $PACKAGE_NAME)"
+            curl -u${{ secrets.ARTIFACTORY_PUBLISH_USER }}:${{ secrets.ARTIFACTORY_PUBLISH_TOKEN }} -X PUT https://traceableai.jfrog.io/artifactory/rpm-internal/amazon-linux2/suricata/x86_64/$FILE -T ${PACKAGE_NAME}
+          done
+
+  publish-rpms-release:
+    runs-on: ubuntu-20.04
+    needs: [ amazon-linux ]
+    if: github.ref == 'refs/heads/release'
+    steps:
+      - name: Create rpm directories
+        run: mkdir -p ./build/rpms/amazon-linux2
+      - name: Download RPM centos-7
+        uses: actions/download-artifact@v2
+        with:
+          name: rpm-centos-7
+          path: build/rpms/amazon-linux2/
+      - name: Checkout Traceable actions
+        uses: actions/checkout@v2
+        with:
+          repository: traceableai/github-actions
+          ssh-key: ${{ secrets.GH_ACTION_READ_KEY }}
+          path: .github/actions
+      - name: Publish rpm centos7
+        uses: ./.github/actions/publish-rpm-centos7
+        with:
+          rpm-file: build/rpms/amazon-linux2/*
+          rpm-arch: x86_64
+          s3-bucket: ${{ secrets.AWS_PACKAGES_S3_BUCKET }}
+          aws-access-key: ${{ secrets.AWS_PACKAGES_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_PACKAGES_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_PACKAGES_S3_REGION }}
 
     
