@@ -39,11 +39,11 @@ jobs:
       - run: ./configure --disable-gccmarch-native --prefix=$PWD/build/
       - run: make -j2
       - run: make install
-      - run: ./make-rpm.sh
+      - run: ./make-rpm.sh 7.0.0
       - name: Uploading rpm
         uses: actions/upload-artifact@v2
         with:
-          name: suricata-7.0.0.amzn2.x86_64.rpm
+          name: suricata-7.0.0.amzn2.x86_64-beta.rpm-amzn2
           path: ./build/rpmbuild/RPMS/x86_64/*.rpm
 
 

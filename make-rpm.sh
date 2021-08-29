@@ -1,6 +1,8 @@
 #!/bin/bash
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "${SCRIPT_DIR}"
+VERSION="$1"
+
 mkdir -p ./build/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 mkdir -p ./build/rpmbuild/BUILD/{usr,run,etc,var}
 mkdir -p ./build/rpmbuild/BUILD/usr/{share,sbin,lib64,lib,bin}
@@ -17,4 +19,9 @@ chmod 755 ./build/rpmbuild/BUILD/usr/lib64/libhtp.so.2.0.0
 cp -rf ./build/share/* ./build/rpmbuild/BUILD/usr/share/
 cp -rf config/* ./build/rpmbuild/BUILD/etc/suricata/
 cp LICENSE ./build/rpmbuild/BUILD/
-rpmbuild --define "_topdir ${PWD}/build/rpmbuild" -bb suricata.spec
+cp suricata.spec ./build/rpmbuild/SPECS/
+if [ ! -z "${VERSION}" ]
+then
+  sed -i "s/^Version:.*/Version: ${VERSION}/1" ./build/rpmbuild/SPECS/suricata.spec
+fi
+rpmbuild --define "_topdir ${PWD}/build/rpmbuild" -bb ./build/rpmbuild/SPECS/suricata.spec

@@ -1,6 +1,6 @@
 Summary: Intrusion Detection System
 Name: suricata
-Version: 7.0.0
+Version: 1.0.0_0
 Release: 1%{?dist}
 Epoch: 1
 License: GPLv2
@@ -24,9 +24,7 @@ cp -r %{_builddir}/* %{buildroot}/
 /usr/share/doc/suricata/*
 /usr/share/suricata/*
 /usr/lib64/libhtp.so.2*
-/usr/lib/python2.7/site-packages/suricatasc/*
-/usr/lib/python2.7/site-packages/suricata/*
-/usr/lib/python2.7/site-packages/suricata-7.0.0_dev-py2.7.egg-info
+/usr/lib/python2.7/site-packages/suricata*
 /etc/suricata/*
 /usr/bin/suricatactl
 /usr/bin/suricatasc
